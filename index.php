@@ -7,7 +7,7 @@ ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
 //include all your model files here
-require 'Model/Article.php';
+require '/Model/Article.php';
 //include all your controllers here
 require 'Controller/HomepageController.php';
 require 'Controller/ArticleController.php';
