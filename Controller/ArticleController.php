@@ -1,9 +1,16 @@
 <?php
 
-declare(strict_types = 1);
+declare(strict_types=1);
 
 class ArticleController
 {
+    private DatabaseManager $databaseManager;
+
+    public function __construct(DatabaseManager $databaseManager)
+    {
+        $this->databaseManager = $databaseManager;
+    }
+
     public function index()
     {
         // Load all required data
@@ -13,25 +20,62 @@ class ArticleController
         require 'View/articles/index.php';
     }
 
-    // Note: this function can also be used in a repository - the choice is yours
     private function getArticles()
     {
-        // TODO: prepare the database connection
-        // Note: you might want to use a re-usable databaseManager class - the choice is yours
-        // TODO: fetch all articles as $rawArticles (as a simple array)
-        $rawArticles = [];
+        try {
+            $query = "SELECT * FROM articles;";
 
-        $articles = [];
-        foreach ($rawArticles as $rawArticle) {
-            // We are converting an article from a "dumb" array to a much more flexible class
-            $articles[] = new Article($rawArticle['title'], $rawArticle['description'], $rawArticle['publish_date']);
+            $statement = $this->databaseManager->connection->prepare($query);
+            $statement->execute();
+            $rawArticles = $statement->fetchAll();
+
+            $articles = [];
+            foreach ($rawArticles as $rawArticle) {
+                // We are converting an article from a "dumb" array to a much more flexible class
+                $articles[] = new Article($rawArticle['id'], $rawArticle['title'], $rawArticle['description'], $rawArticle['publish_date']);
+            }
+
+            return $articles;
+        } catch (Exception $exception) {
+            echo $exception->getMessage(); // Handle or log the exception appropriately
         }
-
-        return $articles;
     }
 
     public function show()
     {
-        // TODO: this can be used for a detail page
+        $article = $this->selectOne();
+
+        require 'View/articles/show.php';
+    }
+
+    private function selectOne()
+    {
+        try {
+            $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+
+            if ($id === false || $id === null) {
+                // Handle invalid or missing ID
+                throw new Exception('Invalid or missing article ID.');
+            }
+
+            $query = "SELECT * FROM articles WHERE id = :id;";
+
+            $statement = $this->databaseManager->connection->prepare($query);
+
+            $statement->bindParam(":id", $id, PDO::PARAM_INT);
+            $statement->execute();
+            $rawArticles = $statement->fetchAll();
+
+            if (empty($rawArticles)) {
+                // Handle no article found with the given ID
+                throw new Exception('Article not found.');
+            }
+
+            $article = new Article($rawArticles[0]['id'], $rawArticles[0]['title'], $rawArticles[0]['description'], $rawArticles[0]['publish_date']);
+
+            return $article;
+        } catch (Exception $exception) {
+            echo $exception->getMessage(); // Handle or log the exception appropriately
+        }
     }
 }
